@@ -18,7 +18,7 @@ const CaseHistories: React.FC = () => {
   // Convert clients to case history format for display
   const caseHistories = clients.map(client => ({
     id: client.id,
-    patient_name: client.name,
+    client_name: client.name,
     age: client.age.toString(),
     gender: client.gender,
     primary_concerns: client.notes.length > 0 ? client.notes[0].content.substring(0, 200) + '...' : 'No concerns documented yet',
@@ -31,7 +31,7 @@ const CaseHistories: React.FC = () => {
   }));
 
   const filteredHistories = caseHistories.filter(history =>
-    history.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    history.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     history.primary_concerns?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -73,7 +73,7 @@ const CaseHistories: React.FC = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search by patient name or concerns..."
+              placeholder="Search by client name or concerns..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="input pl-10"
@@ -139,7 +139,7 @@ const CaseHistories: React.FC = () => {
           <FileText className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-neutral-800 mb-2">No case histories yet</h2>
           <p className="text-neutral-600 mb-6">
-            Your client case histories will appear here once you have active patients
+            Your client case histories will appear here once you have active clients
           </p>
           <Link to="/therapist/case-histories/new" className="btn btn-primary mx-auto">
             <Plus className="w-4 h-4 mr-2" />
@@ -168,7 +168,7 @@ const CaseHistories: React.FC = () => {
                       </div>
                       <div>
                         <h3 className="font-semibold text-neutral-900 text-lg">
-                          {history.patient_name}
+                          {history.client_name}
                         </h3>
                         <p className="text-sm text-neutral-500">
                           {history.age && `Age: ${history.age}`}
@@ -235,7 +235,7 @@ const CaseHistories: React.FC = () => {
                       </Link>
                     </div>
                     <span className="text-xs text-neutral-500">
-                      Active Patient
+                      Active Client
                     </span>
                   </div>
                 </div>

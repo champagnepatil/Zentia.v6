@@ -6,6 +6,7 @@ import Header from '../components/common/Header';
 import Footer from '../components/common/Footer';
 import { Loader2, AlertCircle, Check, X, Eye, EyeOff, Shield, UserCheck, Mail } from 'lucide-react';
 import { AppError, ErrorType } from '../utils/errorHandling';
+import { Glow } from '../components/ui/glow';
 
 interface PasswordStrength {
   score: number;
@@ -250,8 +251,10 @@ const Register: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      
-      <div className="flex-grow flex items-center justify-center px-4 py-12">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <Glow variant="above" className="animate-appear-zoom opacity-100" />
+      </div>
+      <div className="flex-grow flex items-center justify-center px-4 py-12 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

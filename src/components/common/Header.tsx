@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, LogOut, User, Settings } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
+import { cn } from '../../lib/utils';
 
 interface HeaderProps {
   title?: string;
@@ -24,23 +25,27 @@ const Header: React.FC<HeaderProps> = ({ title = 'Zentia' }) => {
     }
   };
 
+  const navItems = [
+    { name: 'About Us', url: '/about' },
+    { name: 'Login', url: '/login' },
+    { name: 'Sign Up', url: '/register' },
+  ];
+
   return (
-    <header className="bg-white/95 backdrop-blur-sm border-b border-neutral-200 py-3 sm:py-4 px-2 sm:px-6 sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto flex items-center justify-between min-h-[56px] sm:min-h-[64px]">
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          <Link to="/" className="flex items-center group min-h-[44px]" aria-label="Back to home">
+    <nav className="fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-2">
+      <div className="flex items-center gap-2 bg-background/80 border border-border backdrop-blur-lg py-0 px-1 rounded-full shadow-lg">
+        <Link to="/" className="flex items-center group min-h-[36px] px-2">
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="w-10 h-10 sm:w-12 sm:h-12 gradient-primary rounded-2xl flex items-center justify-center shadow-soft"
+            className="w-8 h-8 sm:w-9 sm:h-9 gradient-primary rounded-2xl flex items-center justify-center shadow-soft"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="white"/>
               </svg>
             </motion.div>
-            <h1 className="text-lg sm:text-2xl font-bold text-neutral-800 ml-2 sm:ml-3 group-hover:text-primary-600 transition-colors">{title}</h1>
+          <h1 className="text-base sm:text-lg font-bold text-neutral-800 ml-2 sm:ml-2 group-hover:text-primary-600 transition-colors">Zentia</h1>
           </Link>
-        </div>
-
+        {/* Navigation Items */}
         {user ? (
           <div className="relative">
             <motion.button
@@ -59,7 +64,6 @@ const Header: React.FC<HeaderProps> = ({ title = 'Zentia' }) => {
               <span className="hidden md:block text-xs sm:text-sm font-medium text-neutral-700">{user.name}</span>
               <Menu className="w-5 h-5 text-neutral-500" />
             </motion.button>
-
             {isMenuOpen && (
               <motion.div
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -95,14 +99,40 @@ const Header: React.FC<HeaderProps> = ({ title = 'Zentia' }) => {
             )}
           </div>
         ) : (
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <Link to="/about" className="text-neutral-600 hover:text-primary-600 font-medium transition-colors text-xs sm:text-base min-h-[44px]">About Us</Link>
-            <Link to="/login" className="btn btn-ghost text-xs sm:text-base min-h-[44px]">Login</Link>
-            <Link to="/register" className="btn btn-primary text-xs sm:text-base min-h-[44px]">Sign Up</Link>
+          navItems.map((item, idx) => (
+            <Link
+              key={item.name}
+              to={item.url}
+              className={cn(
+                "relative cursor-pointer text-sm font-semibold px-4 py-1 rounded-full transition-colors",
+                "text-foreground/80 hover:text-primary",
+                window.location.pathname === item.url && "bg-muted text-primary"
+              )}
+            >
+              <span>{item.name}</span>
+              {window.location.pathname === item.url && (
+                <motion.div
+                  layoutId="lamp"
+                  className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10"
+                  initial={false}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                  }}
+                >
+                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-t-full">
+                    <div className="absolute w-12 h-6 bg-primary/20 rounded-full blur-md -top-2 -left-2" />
+                    <div className="absolute w-8 h-6 bg-primary/20 rounded-full blur-md -top-1" />
+                    <div className="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm top-0 left-2" />
           </div>
+                </motion.div>
+              )}
+            </Link>
+          ))
         )}
       </div>
-    </header>
+    </nav>
   );
 };
 

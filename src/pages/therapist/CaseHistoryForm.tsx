@@ -19,7 +19,7 @@ const CaseHistoryForm: React.FC = () => {
 
   // General Information State
   const [generalInfo, setGeneralInfo] = useState<Partial<CaseHistory>>({
-    patient_name: '',
+    client_name: '',
     father_mother_guardian_name: '',
     age: '',
     gender: undefined,
@@ -159,8 +159,8 @@ const CaseHistoryForm: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      if (!generalInfo.patient_name?.trim()) {
-        setError('Patient name is required');
+      if (!generalInfo.client_name?.trim()) {
+        setError('Client name is required');
         return;
       }
 
@@ -272,12 +272,12 @@ const CaseHistoryForm: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="label">Patient Name *</label>
+                <label className="label">Client Name *</label>
                 <input
                   type="text"
                   className="input"
-                  value={generalInfo.patient_name || ''}
-                  onChange={(e) => setGeneralInfo({ ...generalInfo, patient_name: e.target.value })}
+                  value={generalInfo.client_name || ''}
+                  onChange={(e) => setGeneralInfo({ ...generalInfo, client_name: e.target.value })}
                   placeholder="Jacqueline Silverio"
                   required
                 />

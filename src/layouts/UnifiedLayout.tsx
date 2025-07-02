@@ -15,6 +15,7 @@ import {
   // Status icons
   CheckCircle, AlertCircle, Clock, ChevronRight
 } from 'lucide-react';
+import { Sidebar, SidebarBody, SidebarLink, useSidebar } from '@/components/ui/sidebar';
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
@@ -91,7 +92,7 @@ const UnifiedLayout: React.FC<UnifiedLayoutProps> = ({ children }) => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
         <motion.div 
@@ -134,157 +135,35 @@ const UnifiedLayout: React.FC<UnifiedLayoutProps> = ({ children }) => {
         onLogout={handleLogout}
       />
 
-      {/* Desktop Sidebar */}
-      <aside className={`
-        ${isCollapsed ? 'w-16' : 'w-20 md:w-72'} 
-        bg-white border-r border-neutral-200 flex-shrink-0 transition-all duration-300
-        hidden md:flex flex-col
-      `}>
-        {/* Header */}
-        <div className="p-4 border-b border-neutral-200">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center group">
-              <div className={`w-10 h-10 bg-gradient-to-r ${config.gradient} rounded-2xl flex items-center justify-center shadow-soft`}>
-                <Heart className="w-6 h-6 text-white" />
-              </div>
-              {!isCollapsed && (
-                <div className="ml-3 hidden md:block">
-                  <h1 className="text-lg font-bold text-neutral-900 group-hover:text-primary-600 transition-colors">
-                    {config.title}
-                  </h1>
-                  <p className="text-xs text-neutral-500 leading-tight">
-                    {config.subtitle}
-                  </p>
+      {/* Desktop Sidebar (new design) */}
+      {user && (
+        <Sidebar>
+          <SidebarBody className="flex flex-col h-full">
+            {/* Top: Logo and Main Nav */}
+            <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+              <Link to="/" className="flex items-center group mb-6">
+                <div className={`w-10 h-10 bg-gradient-to-r ${config.gradient} rounded-2xl flex items-center justify-center shadow-soft`}>
+                  <Heart className="w-6 h-6 text-white" />
                 </div>
-              )}
-            </Link>
-            
-            {/* Collapse button - desktop only */}
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="hidden md:block p-2 rounded-lg hover:bg-neutral-100 transition-colors"
-            >
-              <Menu className="w-4 h-4 text-neutral-600" />
-            </button>
-            
-            {/* Close button - mobile only */}
-            <button
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="md:hidden p-2 rounded-lg hover:bg-neutral-100 transition-colors"
-            >
-              <X className="w-5 h-5 text-neutral-600" />
-            </button>
-          </div>
-        </div>
-
-        {/* User Profile */}
-        <div className="p-4 border-b border-neutral-200">
-          <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-r from-primary-400 to-secondary-400">
-              <img 
-                src={user.avatar || `https://api.dicebear.com/7.x/personas/svg?seed=${user.email}`}
-                alt={user.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            {!isCollapsed && (
-              <div className="ml-3 hidden md:block">
-                <p className="text-sm font-medium text-neutral-900 truncate">
-                  {user.name}
-                </p>
-                <p className="text-xs text-neutral-500 capitalize">
-                  {user.role === 'patient' ? 'client' : user.role}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-grow p-4 space-y-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-            
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`
-                  flex items-center p-3 rounded-xl transition-all duration-200 group
-                  ${active 
-                    ? 'bg-primary-50 text-primary-700 border border-primary-200 shadow-sm' 
-                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
-                  }
-                `}
-              >
-                <Icon className={`w-5 h-5 ${active ? 'text-primary-600' : 'text-neutral-500'} group-hover:scale-110 transition-transform`} />
-                {!isCollapsed && (
-                  <>
-                    <span className="ml-3 font-medium hidden md:block">
-                      {item.label}
-                    </span>
-                    {item.badge && (
-                      <span className="ml-auto bg-error-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
-                )}
+                <span className="ml-3 text-lg font-bold text-neutral-900 group-hover:text-primary-600 transition-colors hidden md:block">
+                  {config.title}
+                </span>
               </Link>
-            );
-          })}
-        </nav>
-
-        {/* Quick Actions */}
-        {!isCollapsed && (
-          <div className="p-4 border-t border-neutral-200">
-            <div className="space-y-2">
-              {user.role === 'therapist' ? (
-                <Link
-                  to="/therapist/ai-toolbox"
-                  className="flex items-center p-3 text-sm bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl hover:from-purple-600 hover:to-blue-600 transition-all duration-200 shadow-md"
-                >
-                  <Brain className="w-4 h-4 mr-2" />
-                  <span className="hidden md:block font-medium">🚀 AI Power Tools</span>
-                </Link>
-              ) : (
-                <Link
-                  to="/client/chat"
-                  className="flex items-center p-3 text-sm bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-xl hover:from-green-600 hover:to-teal-600 transition-all duration-200 shadow-md"
-                >
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  <span className="hidden md:block font-medium">💬 Talk to AI</span>
-                </Link>
-              )}
+              <div className="flex flex-col gap-2">
+                {navItems.map((item, idx) => (
+                  <SidebarLink key={idx} link={{ label: item.label, href: item.href, icon: <item.icon className="w-5 h-5" /> }} />
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Bottom Actions */}
-        <div className="p-4 border-t border-neutral-200 space-y-2">
-          <Link
-            to={user.role === 'therapist' ? '/therapist/settings' : '/client/settings'}
-            className="flex items-center p-2 text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
-          >
-            <Settings className="w-5 h-5" />
-            {!isCollapsed && (
-              <span className="ml-3 hidden md:block">Settings</span>
-            )}
-          </Link>
-          
-          <button
-            onClick={handleLogout}
-            className="flex items-center p-2 text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors w-full"
-          >
-            <LogOut className="w-5 h-5" />
-            {!isCollapsed && (
-              <span className="ml-3 hidden md:block">Sign Out</span>
-            )}
-          </button>
-        </div>
-      </aside>
+            {/* Bottom: Profile, Sign Out, Settings */}
+            <SidebarSignOutButton handleLogout={handleLogout} />
+            <div className="flex flex-col gap-2 mt-auto mb-2 pt-4 border-t border-neutral-200">
+              <SidebarLink link={{ label: user.name, href: '#', icon: <img src={user.avatar || `https://api.dicebear.com/7.x/personas/svg?seed=${user.email}`} alt={user.name} className="h-7 w-7 flex-shrink-0 rounded-full" /> }} />
+              <SidebarLink link={{ label: 'Settings', href: user.role === 'therapist' ? '/therapist/settings' : '/client/settings', icon: <Settings className="w-5 h-5" /> }} />
+            </div>
+          </SidebarBody>
+        </Sidebar>
+      )}
 
       {/* Main Content */}
       <div className="flex-grow flex flex-col min-w-0">
@@ -359,6 +238,16 @@ const UnifiedLayout: React.FC<UnifiedLayoutProps> = ({ children }) => {
         </main>
       </div>
     </div>
+  );
+};
+
+const SidebarSignOutButton = ({ handleLogout }: { handleLogout: () => void }) => {
+  const { open } = useSidebar();
+  return (
+    <button onClick={handleLogout} className="flex items-center gap-2 text-slate-600 hover:bg-slate-100 rounded-md p-2 w-full">
+      <LogOut className="w-5 h-5" />
+      {open && <span>Sign Out</span>}
+    </button>
   );
 };
 

@@ -31,7 +31,12 @@ export const AITestPanel: React.FC = () => {
     setTestOutput(prev => prev + `\n🔍 Testing message: "${message}"\n`);
     
     try {
-      const chatResponse = await GeminiAIService.generaRispostaChat(message, 'demo-client-1', true);
+      const mockClientContext = {
+        name: 'Sarah Mitchell',
+        age: 32,
+        triggers: ['work stress', 'relationship conflict', 'public speaking']
+      };
+      const chatResponse = await GeminiAIService.generaRispostaChatConContesto(message, mockClientContext);
       setTestOutput(prev => prev + `✅ Response generated: ${chatResponse.contenuto}\n`);
       setTestOutput(prev => prev + `📊 Metadata: ${JSON.stringify(chatResponse.metadata, null, 2)}\n\n`);
     } catch (error) {

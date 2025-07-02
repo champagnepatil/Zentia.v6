@@ -11,6 +11,7 @@ import {
   handleAPIResponse,
   isNetworkError
 } from '../utils/errorHandling';
+import { getClientDisplayName } from '../utils/clientUtils';
 
 // Inizializzazione Gemini con controllo errori
 const initializeGemini = () => {
@@ -199,10 +200,10 @@ export class GeminiAIService {
   static async generaRispostaChat(
     messaggioUtente: string, 
     clientId?: string,
-    contattoTerapeutico?: boolean
+    contattoTerapeutico?: boolean,
+    additionalContext?: string
   ): Promise<ChatResponse> {
     const { logger } = Sentry;
-    
     return Sentry.startSpan(
       {
         op: "ai.chat_generation",
@@ -212,88 +213,70 @@ export class GeminiAIService {
         span.setAttribute("message_length", messaggioUtente.length);
         span.setAttribute("has_client_id", !!clientId);
         span.setAttribute("therapeutic_contact", !!contattoTerapeutico);
-        
         logger.info("Starting chat response generation", {
           messageLength: messaggioUtente.length,
           hasClientId: !!clientId,
           therapeuticContact: !!contattoTerapeutico
         });
-
-        const { data: response, error } = await safeAsync(
-          async () => {
-            // Validate input
-            if (!messaggioUtente || messaggioUtente.trim().length === 0) {
-              throw new AppError(
-                'Message is required for chat response',
-                ErrorType.VALIDATION,
-                ErrorSeverity.MEDIUM,
-                { messageLength: messaggioUtente?.length || 0 },
-                'Please enter a message to get a response.'
-              );
-            }
-
-            if (messaggioUtente.length > 4000) {
-              throw new AppError(
-                'Message too long for processing',
-                ErrorType.VALIDATION,
-                ErrorSeverity.MEDIUM,
-                { messageLength: messaggioUtente.length },
-                'Message is too long. Please try a shorter message.'
-              );
-            }
-
-            console.log('🤖 Generating chat response for:', messaggioUtente.substring(0, 50) + '...');
-            const model = this.getModel();
-            console.log('🔍 Gemini model status:', model ? 'Available' : 'Not available');
-
+        // Fetch client context
+        let clientContext: any = { name: 'Unknown', age: 'Unknown', triggers: [], copingStrategies: [] };
+        if (clientId) {
+          // Try to fetch from clients table
+          const { data: clientData } = await supabase
+            .from('clients')
+            .select('first_name, last_name, age, triggers, coping_strategies')
+            .eq('id', clientId)
+            .single();
+          if (clientData) {
+            clientContext.name = `${clientData.first_name || ''} ${clientData.last_name || ''}`.trim() || getClientDisplayName(clientId);
+            clientContext.age = clientData.age || 'Unknown';
+            clientContext.triggers = clientData.triggers || [];
+            clientContext.copingStrategies = clientData.coping_strategies || [];
+          } else {
+            clientContext.name = getClientDisplayName(clientId);
+          }
+        }
+        // Fetch all therapy notes for the client
+        let allNotes: any[] = [];
+        if (clientId && contattoTerapeutico) {
+          const { data: notes } = await supabase
+            .from('notes')
+            .select('created_at, title, content')
+            .eq('user_id', clientId)
+            .order('created_at', { ascending: false });
+          allNotes = notes || [];
+        }
             const contattoEmotivo = this.analizzaContestoEmotivo(messaggioUtente);
             console.log('🧠 Emotional context analyzed:', contattoEmotivo);
             
             let noteRilevanti: any[] = [];
             if (clientId && contattoTerapeutico) {
-              const { data: notes, error: notesError } = await safeAsync(async () => {
-                const result = await supabase
+          const { data: notes } = await supabase
                   .from('notes')
                   .select('*')
                   .eq('user_id', clientId)
                   .limit(5);
-                
-                if (result.error) {
-                  throw new AppError(
-                    `Error fetching notes for chat context: ${result.error.message}`,
-                    ErrorType.DATABASE,
-                    ErrorSeverity.LOW,
-                    { clientId, supabaseError: result.error }
-                  );
-                }
-                
-                return result.data || [];
-              }, {
-                action: 'fetch_chat_context_notes',
-                component: 'GeminiAIService',
-                additionalData: { clientId }
-              });
-
-              if (notesError) {
-                logError(notesError, {
-                  action: 'fetch_chat_context_notes',
-                  component: 'GeminiAIService',
-                  additionalData: { clientId }
-                });
-              } else {
                 noteRilevanti = notes || [];
               }
               console.log('📝 Relevant notes found:', noteRilevanti.length);
-            }
 
             span.setAttribute("relevant_notes_count", noteRilevanti.length);
             span.setAttribute("emotional_intensity", contattoEmotivo.intensita || 'unknown');
 
             let response: ChatResponse;
+        const model = this.getModel();
             if (model) {
               console.log('✅ Using Gemini AI for response');
               span.setAttribute("ai_model_used", "gemini");
-              response = await this.generaRispostaChatConGemini(messaggioUtente, contattoEmotivo, noteRilevanti, model);
+          response = await this.generaRispostaChatConGemini(
+            messaggioUtente,
+            contattoEmotivo,
+            noteRilevanti,
+            model,
+            clientContext,
+            allNotes,
+            additionalContext
+          );
             } else {
               console.log('⚠️ Gemini model not available, using fallback');
               span.setAttribute("ai_model_used", "fallback");
@@ -312,38 +295,6 @@ export class GeminiAIService {
             });
 
             return response;
-          },
-          {
-            action: 'generate_chat_response',
-            component: 'GeminiAIService',
-            additionalData: { 
-              messageLength: messaggioUtente?.length || 0,
-              clientId,
-              therapeuticContact: contattoTerapeutico
-            }
-          },
-          // Fallback response
-          this.generaRispostaChatFallback(
-            messaggioUtente || 'empty message', 
-            { intensita: 'medium', emozioni: ['neutral'], trigger: [] }
-          )
-        );
-
-        if (error) {
-          span.setAttribute("success", false);
-          span.setAttribute("error", error.message);
-          
-          logger.error('Error generating chat response', {
-            messageLength: messaggioUtente?.length || 0,
-            error: error.message,
-            errorType: error.type
-          });
-
-          // Return fallback response even if there was an error
-          return response!;
-        }
-
-        return response!;
       }
     );
   }
@@ -458,7 +409,7 @@ export class GeminiAIService {
 You are an expert psychologist analyzing therapy notes. Analyze these sessions and provide a structured analysis in JSON format.
 
 THERAPY NOTES:
-${contenutoNote.map(nota => `
+-${contenutoNote.map((nota: any) => `
 Date: ${nota.data}
 Title: ${nota.titolo}
 Content: ${nota.contenuto}
@@ -497,26 +448,52 @@ Provide the analysis in the following JSON format (respond ONLY with valid JSON)
     messaggio: string, 
     contesto: any, 
     noteRilevanti: any[],
-    model: any
+    model: any,
+    clientContext?: any,
+    allNotes?: any[],
+    additionalContext?: string
   ): Promise<ChatResponse> {
     const timestamp = new Date().toISOString();
+    // Build therapy notes section
+    const therapyNotesSection = (allNotes && allNotes.length > 0)
+      ? allNotes.map((n: any) => `- ${n.created_at?.split('T')[0] || 'Unknown date'}: ${n.title || 'Note'} - ${n.content || ''}`).join('\n')
+      : 'No therapy notes available';
+    // Build triggers and coping strategies
+    const triggersSection = (clientContext?.triggers && clientContext.triggers.length > 0)
+      ? clientContext.triggers.join(', ')
+      : 'None identified';
+    const copingSection = (clientContext?.copingStrategies && clientContext.copingStrategies.length > 0)
+      ? clientContext.copingStrategies.map((s: any) => s.title || s).join(', ')
+      : 'None available';
+    // Build prompt
     const prompt = `
 You are Zentia, a compassionate therapeutic AI assistant that provides support between therapy sessions.
 
 TIMESTAMP: ${timestamp}
 
+CLIENT CONTEXT:
+Name: ${clientContext?.name || 'Unknown'}
+Age: ${clientContext?.age || 'Unknown'}
+
+THERAPY NOTES:
+${therapyNotesSection}
+
+TRIGGERS: ${triggersSection}
+COPING STRATEGIES: ${copingSection}
+
+Please address the client by name (${clientContext?.name || 'Unknown'}) and reference their therapy context when appropriate.
+
 USER MESSAGE: "${messaggio}"
+${additionalContext ? `\nADDITIONAL CONTEXT:\n${additionalContext}` : ''}
 
 EMOTIONAL CONTEXT:
 - Detected emotions: ${(contesto.emozioni || []).join(', ') || 'no specific emotions detected'}
 - Identified triggers: ${(contesto.triggers || []).join(', ') || 'no specific triggers identified'}
 - Intensity: ${contesto.intensita || 'normal'}
 
-RELEVANT THERAPY NOTES: ${noteRilevanti.length > 0 ? noteRilevanti.map(nota => nota.content).join('. ') : 'No therapy notes available'}
-
 Respond ONLY with a valid JSON object in this exact format (escape all quotes properly):
 {
-  "contenuto": "Your therapeutic response here as a single string, use \\" for any quotes",
+  "contenuto": "Your therapeutic response here as a single string, use \\\" for any quotes",
   "metadata": {
     "emozioniRilevate": ["emotion1", "emotion2"],
     "triggerIndividuati": ["trigger1", "trigger2"],
@@ -618,10 +595,10 @@ Assessments: ${dati.assessment.length} evaluations
 Daily Monitoring: ${dati.monitoraggio.length} entries
 
 NOTES DETAILS:
-${dati.note.map(nota => `- ${nota.title}: ${nota.content.substring(0, 150)}...`).join('\n')}
+-${dati.note.map((nota: any) => `- ${nota.title}: ${nota.content.substring(0, 150)}...`).join('\n')}
 
 ASSESSMENT SCORES:
-${dati.assessment.map(assessment => `- ${assessment.instrument}: Score ${assessment.score}`).join('\n')}
+-${dati.assessment.map((assessment: any) => `- ${assessment.instrument}: Score ${assessment.score}`).join('\n')}
 
 MONITORING DATA:
 Average mood: ${dati.monitoraggio.length > 0 ? (dati.monitoraggio.reduce((sum: number, entry: any) => sum + (entry.mood_rating || 5), 0) / dati.monitoraggio.length).toFixed(1) : 'N/A'}

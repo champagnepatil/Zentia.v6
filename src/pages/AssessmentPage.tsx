@@ -10,7 +10,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import EmptyState from '../components/ui/EmptyState';
 
 interface AssessmentData {
-  patientId: string;
+  clientId?: string;
+  patientId?: string;
   assessmentType: 'PHQ9' | 'GAD7' | 'WHODAS';
   scores: Record<string, number>;
   notes?: string;
@@ -21,7 +22,7 @@ export function AssessmentPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [patientInfo, setPatientInfo] = useState<any>(null);
+  const [clientInfo, setClientInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [assessmentResults, setAssessmentResults] = useState<any[]>([]);
   const [availableAssessments, setAvailableAssessments] = useState<string[]>(['PHQ-9', 'GAD-7', 'WHODAS-2.0']);
@@ -87,7 +88,7 @@ export function AssessmentPage() {
   };
 
   useEffect(() => {
-    const fetchPatientInfo = async () => {
+    const fetchClientInfo = async () => {
       try {
         const clientUUID = normalizeClientId(clientId!);
         
@@ -99,26 +100,26 @@ export function AssessmentPage() {
           .single();
         
         if (clientData) {
-          setPatientInfo({
+          setClientInfo({
             id: clientId,
             name: `${clientData.first_name} ${clientData.last_name}`,
             email: clientData.email
           });
         } else {
           // Fallback to demo data
-          setPatientInfo({
+          setClientInfo({
             id: clientId,
             name: getClientDisplayName(clientId!),
-            email: 'demo@patient.com'
+            email: 'client@demo.com'
           });
         }
       } catch (error) {
-        console.error('Error fetching patient info:', error);
+        console.error('Error fetching client info:', error);
         // Use fallback demo data
-        setPatientInfo({
+        setClientInfo({
           id: clientId,
           name: getClientDisplayName(clientId!),
-          email: 'demo@patient.com'
+          email: 'client@demo.com'
         });
       } finally {
         setIsLoading(false);
@@ -126,7 +127,7 @@ export function AssessmentPage() {
     };
 
     if (clientId) {
-      fetchPatientInfo();
+      fetchClientInfo();
     } else {
       setIsLoading(false);
     }
@@ -207,7 +208,9 @@ export function AssessmentPage() {
 
   const handleSubmit = async (data: AssessmentData) => {
     try {
-      const clientUUID = normalizeClientId(data.patientId);
+      // Accept both clientId and patientId for backward compatibility
+      const id = data.clientId || data.patientId;
+      const clientUUID = normalizeClientId(id!);
       const totalScore = Object.values(data.scores).reduce((sum, score) => sum + score, 0);
 
       // Map assessment type to instrument name
@@ -268,9 +271,9 @@ export function AssessmentPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <ClipboardList className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Patient ID Required</h2>
-          <p className="text-gray-600 mb-4">No patient ID was provided for this assessment.</p>
-          <Button onClick={() => navigate('/client')}>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Client ID Required</h2>
+          <p className="text-gray-600 mb-4">No client ID was provided for this assessment.</p>
+          <Button variant="default" onClick={() => navigate('/client')}>
             Return to Dashboard
           </Button>
         </div>
@@ -341,18 +344,18 @@ export function AssessmentPage() {
         </div>
       </div>
 
-      {/* Patient Info */}
-      {patientInfo && (
+      {/* Client Info */}
+      {clientInfo && (
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-center gap-3">
               <User className="w-5 h-5 text-blue-600" />
               <div>
                 <p className="text-sm font-medium text-blue-900">
-                  Assessment for: {patientInfo.name}
+                  Assessment for: {clientInfo.name}
                 </p>
                 <p className="text-sm text-blue-700">
-                  Patient ID: {patientInfo.id}
+                  Client ID: {clientInfo.id}
                 </p>
               </div>
             </div>
@@ -382,7 +385,7 @@ export function AssessmentPage() {
                       <div>
                         <h3 className="font-medium text-gray-900">{instrument}</h3>
                         <p className="text-sm text-gray-600">
-                          {instrument === 'PHQ-9' && 'Depression screening'}
+                          {instrument === 'PH-9' && 'Depression screening'}
                           {instrument === 'GAD-7' && 'Anxiety screening'}
                           {instrument === 'WHODAS-2.0' && 'Functioning assessment'}
                         </p>
@@ -500,7 +503,7 @@ export function AssessmentPage() {
             </div>
           </div>
         ) : (
-          // Patient View - Show assessment form
+          // Client View - Show assessment form
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-2">
@@ -513,14 +516,14 @@ export function AssessmentPage() {
             </div>
 
             <AssessmentForm
-              patientId={clientId}
+              clientId={clientId}
               onSubmit={handleSubmit}
               defaultAssessmentType={assessmentType}
             />
           </div>
         )}
 
-        {/* Patient Instructions (only for patient view) */}
+        {/* Client Instructions (only for client view) */}
         {user?.role !== 'therapist' && (
           <div className="mt-6 bg-gray-50 rounded-lg p-6">
             <h3 className="font-medium text-gray-900 mb-3">

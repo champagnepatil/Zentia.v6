@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/common/Header';
 import Footer from '../components/common/Footer';
 import { Loader2, AlertCircle } from 'lucide-react';
+import { Glow } from '../components/ui/glow';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -124,8 +125,10 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      
-      <div className="flex-grow flex items-center justify-center px-4 py-12">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <Glow variant="above" className="animate-appear-zoom opacity-100" />
+      </div>
+      <div className="flex-grow flex items-center justify-center px-4 py-12 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
