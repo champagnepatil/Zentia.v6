@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🧠 ReflectMe - Clinical Assessment Platform
 
 **Piattaforma digitale per assessment clinici standardizzati e monitoraggio sintomi in tempo reale**
@@ -333,3 +334,7 @@ Per domande tecniche o supporto:
 - 📖 **Docs**: Vedere `PHASE2_SETUP.md` per documentazione dettagliata
 
 **ReflectMe Phase 2 è production-ready! 🎉**
+=======
+# Zentia.v6
+UI Changes and updated AI functionality
+>>>>>>> ac99743aba5b0956fd0a823149a25d9de92a1087
